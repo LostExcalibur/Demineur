@@ -16,6 +16,17 @@ MOCHE = pygame.Color(30, 30, 30)
 ROUGE = pygame.Color(245, 0, 0)
 LAQUE = pygame.Color(240, 217, 181)
 
+couleurs_chiffres = {
+		1: pygame.Color(118, 247, 249),
+		2: pygame.Color(29, 28, 74),
+		3: pygame.Color(232, 9, 2),
+		4: pygame.Color(255, 156, 61),
+		5: pygame.Color(114, 10, 235),
+		6: pygame.Color(255, 255, 255),
+		7: pygame.Color(17, 160, 3),
+		8: pygame.Color(235, 246, 40)
+}
+
 
 class Game:
 	def __init__(self, horiz_tiles: int, vert_tiles: int, num_bombs: int = 50):
@@ -146,12 +157,13 @@ class Game:
 					pygame.draw.rect(self.base_board, FOND,
 									 pygame.Rect(tile.x * self.xtilesize, tile.y * self.ytilesize,
 												 self.xtilesize, self.ytilesize))
-					text = self.Font.render(str(tile.bomb_neighbours_count) if tile.bomb_neighbours_count > 0 else "",
-											ROUGE)
-					text_rect = text.get_rect()
-					text_rect.center = (tile.x * self.xtilesize + self.xtilesize // 2,
-										tile.y * self.ytilesize + self.ytilesize // 2)
-					self.base_board.blit(text, text_rect)
+					if tile.bomb_neighbours_count > 0:
+						text = self.Font.render(str(tile.bomb_neighbours_count),
+												couleurs_chiffres[tile.bomb_neighbours_count])
+						text_rect = text.get_rect()
+						text_rect.center = (tile.x * self.xtilesize + self.xtilesize // 2,
+											tile.y * self.ytilesize + self.ytilesize // 2)
+						self.base_board.blit(text, text_rect)
 			if tile.flagged:
 				self.base_board.blit(self.flag_image,
 									 (tile.x * self.xtilesize, tile.y * self.ytilesize))
