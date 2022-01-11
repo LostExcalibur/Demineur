@@ -1,3 +1,5 @@
+# encoding=latin-1
+
 import pygame as pg
 
 
@@ -5,6 +7,7 @@ class FontRenderer:
 	"""
 	Une classe simple pour afficher du texte sur une fenètre pygame.
 	"""
+
 	def __init__(self, name: str, size: int):
 		"""
 		Initialise un objet FontRenderer, qui permet d'afficher du texte sur une fenètre pygame.

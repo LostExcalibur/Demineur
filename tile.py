@@ -1,3 +1,5 @@
+# encoding=latin-1
+
 class Tile:
 	"""
 	Une classe simple permettant de stocker une case et ses attributs.

@@ -1,9 +1,13 @@
-import pygame
-from tile import Tile
-from random import randint
-from font import FontRenderer
+# encoding=latin-1
+
 from os import path
+from random import randint
 from time import time
+
+import pygame
+
+from font import FontRenderer
+from tile import Tile
 
 BLANC = pygame.Color(255, 255, 255)
 NOIR = pygame.Color(0, 0, 0)
@@ -29,6 +33,7 @@ class Game:
 		self.num_tiles = horiz_tiles * vert_tiles
 
 		self.Font = FontRenderer("segoe-ui-symbol.ttf", int(max(self.xtilesize, self.ytilesize) * .6))
+		# TODO: meilleures images...
 		self.flag_image = pygame.transform.smoothscale(
 				pygame.image.load(path.join("resources", "drapeau.png")),
 				(self.xtilesize, self.ytilesize))
@@ -47,20 +52,23 @@ class Game:
 			for y in range(self.vert_tiles):
 				self.tiles.append(Tile(x, y))
 
-		self.screen = pygame.display.set_mode((self.width, self.height))
+		# TODO : rendre la fenètre redimensionnable
+		self.screen = pygame.display.set_mode((self.width, self.height))  # , pygame.RESIZABLE)
 		self.base_board = self.build_board()
 
 	def run(self) -> None:
 		debut = time()
 		while self.running:
-			# On s'occupe du titre de la fenÃ¨tre
+			# On s'occupe du titre de la fenètre
 			if self.lost:
+				# TODO: initialiser temps proprement en dehors de la boucle
 				pygame.display.set_caption(
-					f"Perdu, il restait {str(self.hidden_bombs)} bombes, temps de jeu : {temps}s")
+						f"Perdu, il restait {str(self.hidden_bombs)} bombes, temps de jeu : {temps}s")
 			else:
-				pygame.display.set_caption(f"Il reste {str(self.num_bombs - self.flagged)} bombes, temps de jeu : {int(time() - debut)}s")
+				pygame.display.set_caption(
+						f"Il reste {str(self.num_bombs - self.flagged)} bombes, temps de jeu : {int(time() - debut)}s")
 
-			# Si on a gagnÃ©
+			# Si on a gagné
 			if self.generated and self.hidden_bombs == 0:
 				self.running = False
 				print("GG bg")
@@ -77,16 +85,16 @@ class Game:
 					x, y = event.pos[0] // self.xtilesize, event.pos[1] // self.ytilesize
 					clicked_tile = self.tiles[x * self.vert_tiles + y]
 
-					# Clic gauche, on veut rÃ©vÃ©ler une ou des cases
+					# Clic gauche, on veut révéler une ou des cases
 					if event.button == pygame.BUTTON_LEFT:
-						# On ne peut pas rÃ©vÃ©ler une case drapeau
+						# On ne peut pas révéler une case drapeau
 						if clicked_tile.flagged: continue
 						if not self.generated:
 							self.generate(x, y)
 
-						# Si la case est dÃ©jÃ  rÃ©vÃ©lÃ©e et a autant de drapeaux autour d'elle que de bombes,
-						# on peut cliquer dessus pour rÃ©vÃ©ler toutes les cases adjacentes qui n'ont pas de drapeau
-						# (si un drapeau a Ã©tÃ© mal placÃ©, on perd la partie)
+						# Si la case est déjà révélée et a autant de drapeaux autour d'elle que de bombes,
+						# on peut cliquer dessus pour révéler toutes les cases adjacentes qui n'ont pas de drapeau
+						# (si un drapeau a été mal placé, on perd la partie)
 						if clicked_tile.revealed:
 							num_flagged = sum(neighbour.flagged for neighbour in clicked_tile.neighbours)
 							if num_flagged == clicked_tile.bomb_neighbours_count:
@@ -96,29 +104,29 @@ class Game:
 										if neighbour.is_bomb:
 											temps = self.lose(debut)
 
-						# On a cliquÃ© sur une bombe cachÃ©e
+						# On a cliqué sur une bombe cachée
 						if clicked_tile.is_bomb:
 							temps = self.lose(debut)
 
-						# Sinon on rÃ©vÃ¨le simplement la case cliquÃ©e
+						# Sinon on révèle simplement la case cliquée
 						else:
 							clicked_tile.floodfill()
 
 					# Clic droit, on marque une case d'un drapeau
 					elif event.button == pygame.BUTTON_RIGHT and not clicked_tile.revealed:
-						# Si la case Ã©tait dÃ©jÃ  marquÃ©e, on rajoute la bombe cachÃ©e qui avait Ã©tÃ© enlevÃ©e du compte
+						# Si la case était déjà marquée, on rajoute la bombe cachée qui avait été enlevée du compte
 						if clicked_tile.flagged:
 							if clicked_tile.is_bomb:
 								self.hidden_bombs += 1
 							self.flagged -= 1
 
-						# Sinon, si c'est une bombe on l'enlÃ¨ve du compte des bombes cachÃ©es
+						# Sinon, si c'est une bombe on l'enlève du compte des bombes cachées
 						else:
 							if clicked_tile.is_bomb:
 								self.hidden_bombs -= 1
 							self.flagged += 1
 
-						# Pour Ã©viter que le titre affiche un compte de bombes restantes nÃ©gatif
+						# Pour éviter que le titre affiche un compte de bombes restantes négatif
 						if self.flagged > self.num_bombs:
 							self.flagged = self.num_bombs
 
@@ -134,7 +142,7 @@ class Game:
 					self.base_board.blit(self.bomb_image,
 										 (tile.x * self.xtilesize, tile.y * self.ytilesize))
 				else:
-					# On affiche le fond et l'Ã©ventuel nombre de bombes voisines
+					# On affiche le fond et l'éventuel nombre de bombes voisines
 					pygame.draw.rect(self.base_board, FOND,
 									 pygame.Rect(tile.x * self.xtilesize, tile.y * self.ytilesize,
 												 self.xtilesize, self.ytilesize))
@@ -157,7 +165,7 @@ class Game:
 		"""
 		Affiche toutes les bombes et termine la partie, et renvoit le temps de jeu.
 
-		:param debut: Le temps de dÃ©but
+		:param debut: Le temps de début
 		:return: Le temps total de jeu
 		"""
 		for tile in self.tiles:
@@ -175,10 +183,10 @@ class Game:
 
 	def voisins(self, x: int, y: int) -> list[int]:
 		"""
-		La liste des voisins d'une case sÃ©lectionnÃ©e. Les voisins sont exprimÃ©s en termes d'indices dans le tableau des cases.
+		La liste des voisins d'une case sélectionnée. Les voisins sont exprimés en termes d'indices dans le tableau des cases.
 
-		:param x: La coordonnÃ©e horizontale.
-		:param y: La coordonnÃ©e verticale.
+		:param x: La coordonnée horizontale.
+		:param y: La coordonnée verticale.
 		:return: La liste des voisins.
 		"""
 		v = []
@@ -191,10 +199,10 @@ class Game:
 
 	def generate(self, x: int, y: int) -> None:
 		"""
-		GÃ©nÃ¨re la liste des bombes et initialise chaque case avec ses voisins.
+		Génère la liste des bombes et initialise chaque case avec ses voisins.
 
-		:param x: La coordonnÃ©e horizontale.
-		:param y: La coordonnÃ©e verticale.
+		:param x: La coordonnée horizontale.
+		:param y: La coordonnée verticale.
 		"""
 		selected_tile_number = x * self.vert_tiles + y
 		voisins = self.voisins(x, y)
@@ -203,7 +211,7 @@ class Game:
 		while self.hidden_bombs < self.num_bombs:
 			i = randint(0, self.num_tiles - 1)
 
-			# On veut que la premiÃ¨re case cliquÃ©e n'ait aucune bombe parmis ses voisins
+			# On veut que la première case cliquée n'ait aucune bombe parmis ses voisins
 			while self.tiles[i].is_bomb or i == selected_tile_number or i in voisins:
 				i = randint(0, self.num_tiles - 1)
 			self.tiles[i].is_bomb = True
