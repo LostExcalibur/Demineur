@@ -9,13 +9,9 @@ import pygame
 from font import FontRenderer
 from tile import Tile
 
-BLANC = pygame.Color(255, 255, 255)
-NOIR = pygame.Color(0, 0, 0)
 FOND = pygame.Color(150, 150, 150)
-MOCHE = pygame.Color(30, 30, 30)
-ROUGE = pygame.Color(245, 0, 0)
-LAQUE = pygame.Color(240, 217, 181)
 
+# TODO : trouver de meilleures couleurs...
 couleurs_chiffres = {
 		1: pygame.Color(118, 247, 249),
 		2: pygame.Color(29, 28, 74),
@@ -44,7 +40,7 @@ class Game:
 		self.num_tiles = horiz_tiles * vert_tiles
 
 		self.Font = FontRenderer("segoe-ui-symbol.ttf", int(max(self.xtilesize, self.ytilesize) * .6))
-		# TODO: meilleures images...
+		# TODO : meilleures images...
 		self.flag_image = pygame.transform.smoothscale(
 				pygame.image.load(path.join("resources", "drapeau.png")),
 				(self.xtilesize, self.ytilesize))
@@ -63,22 +59,26 @@ class Game:
 			for y in range(self.vert_tiles):
 				self.tiles.append(Tile(x, y))
 
-		# TODO : rendre la fenètre redimensionnable
-		self.screen = pygame.display.set_mode((self.width, self.height))  # , pygame.RESIZABLE)
+		self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
 		self.base_board = self.build_board()
 
 	def run(self) -> None:
+		while self.num_bombs > self.num_tiles - 9:
+			self.num_bombs = int(input(
+					f"Le nombre de bombes sélectionné est trop grand, merci de le prendre inférieur à {self.num_tiles - 9} :\n"))
 		debut = time()
+		temps = 0.
 		while self.running:
 			# On s'occupe du titre de la fenètre
 			if self.lost:
-				# TODO: initialiser temps proprement en dehors de la boucle
+				# TODO : mécanisme pour recommencer une nouvelle partie
 				pygame.display.set_caption(
 						f"Perdu, il restait {str(self.hidden_bombs)} bombes, temps de jeu : {temps}s")
 			else:
 				pygame.display.set_caption(
 						f"Il reste {str(self.num_bombs - self.flagged)} bombes, temps de jeu : {int(time() - debut)}s")
 
+			# TODO : mécanisme pour recommencer une nouvelle partie
 			# Si on a gagné
 			if self.generated and self.hidden_bombs == 0:
 				self.running = False
@@ -143,8 +143,28 @@ class Game:
 
 						clicked_tile.flagged = not clicked_tile.flagged
 
+				elif event.type == pygame.WINDOWRESIZED:
+					self.resize(event)
+
 			# Affichage
 			self.display()
+
+	def resize(self, event: pygame.event.Event):
+		self.width, self.height = event.x, event.y
+		self.xtilesize = self.width // self.horiz_tiles
+		self.ytilesize = self.height // self.vert_tiles
+
+		# On redimensionne les images
+		self.flag_image = pygame.transform.scale(self.flag_image, (self.xtilesize, self.ytilesize))
+		self.bomb_image = pygame.transform.scale(self.bomb_image, (self.xtilesize, self.ytilesize))
+		self.tile_image = pygame.transform.scale(self.tile_image, (self.xtilesize, self.ytilesize))
+
+		# On modifie la nouvelle taille de sorte à ne pas avoir de bords noirs autour des cases
+		self.width = self.xtilesize * self.horiz_tiles
+		self.height = self.ytilesize * self.vert_tiles
+		self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+
+		self.base_board = self.build_board()
 
 	def display(self) -> None:
 		for tile in self.tiles:
@@ -189,6 +209,7 @@ class Game:
 	def build_board(self) -> pygame.Surface:
 		board = pygame.Surface((self.width, self.height))
 		for tile in self.tiles:
+			if tile.revealed: continue
 			board.blit(self.tile_image,
 					   (tile.x * self.xtilesize, tile.y * self.ytilesize))
 		return board
