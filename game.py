@@ -1,26 +1,27 @@
 # encoding=latin-1
-
+import sqlite3
 from os import path
 from random import randint
 from time import time
 
 import pygame
+from easygui import enterbox
 
 from font import FontRenderer
 from tile import Tile
 
 FOND = pygame.Color(150, 150, 150)
 
-# TODO : trouver de meilleures couleurs...
+# Merci Microsoft
 couleurs_chiffres = {
-		1: pygame.Color(118, 247, 249),
-		2: pygame.Color(29, 28, 74),
-		3: pygame.Color(232, 9, 2),
-		4: pygame.Color(255, 156, 61),
-		5: pygame.Color(114, 10, 235),
-		6: pygame.Color(255, 255, 255),
-		7: pygame.Color(17, 160, 3),
-		8: pygame.Color(235, 246, 40)
+		1: pygame.Color(0, 0, 255),
+		2: pygame.Color(0, 128, 0),
+		3: pygame.Color(255, 0, 0),
+		4: pygame.Color(0, 0, 128),
+		5: pygame.Color(128, 0, 0),
+		6: pygame.Color(0, 128, 128),
+		7: pygame.Color(0, 0, 0),
+		8: pygame.Color(128, 128, 128)
 }
 
 
@@ -51,6 +52,12 @@ class Game:
 				pygame.image.load(path.join("resources", "bombe.png")),
 				(self.xtilesize, self.ytilesize))
 
+		self.db = sqlite3.connect("records.db")
+		# On regarde si la table "records" existe, et sinon on la crée
+		if len(self.db.execute(
+				"SELECT name FROM sqlite_master WHERE type='table' and name='records';").fetchall()) != 1:
+			self.init_db()
+
 		self.running = True
 		self.generated = False
 		self.lost = False
@@ -59,13 +66,23 @@ class Game:
 			for y in range(self.vert_tiles):
 				self.tiles.append(Tile(x, y))
 
-		self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
-		self.base_board = self.build_board()
-
-	def run(self) -> None:
+		# On modifie ici le nombre de bombes pour pas avoir la fenètre vide pendant ce dialogue
 		while self.num_bombs > self.num_tiles - 9:
 			self.num_bombs = int(input(
 					f"Le nombre de bombes sélectionné est trop grand, merci de le prendre inférieur à {self.num_tiles - 9} :\n"))
+
+		self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+		self.base_board = self.build_board()
+
+	def init_db(self):
+		with self.db:
+			self.db.execute("""CREATE TABLE IF NOT EXISTS "records"(
+								ID 		INTEGER PRIMARY KEY AUTOINCREMENT,
+								NOM 	TEXT   				NOT NULL,
+								BOMBES 	INTEGER    			NOT NULL,
+								TEMPS 	REAL   				NOT NULL);""")
+
+	def run(self) -> None:
 		debut = time()
 		temps = 0.
 		while self.running:
@@ -81,15 +98,26 @@ class Game:
 			# TODO : mécanisme pour recommencer une nouvelle partie
 			# Si on a gagné
 			if self.generated and self.hidden_bombs == 0:
-				self.running = False
-				print("GG bg")
-				print(f"Temps : {int(time() - debut)}s")
+				self.win(debut)
 
 			# Boucle principale
 			for event in pygame.event.get():
 				# Quitter le jeu
 				if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
 					self.running = False
+
+				# Technique secrète pour aller vite
+				if event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_s and event.mod & pygame.KMOD_CTRL and not self.lost:
+						for tile in self.tiles:
+							if tile.is_bomb:
+								tile.revealed = True
+
+				elif event.type == pygame.KEYUP:
+					if event.key == pygame.K_s and not self.lost:
+						for tile in self.tiles:
+							if tile.is_bomb:
+								tile.revealed = False
 
 				# Clic de souris
 				if event.type == pygame.MOUSEBUTTONDOWN and not self.lost:
@@ -149,6 +177,15 @@ class Game:
 			# Affichage
 			self.display()
 
+	def win(self, debut):
+		self.running = False
+		temps = time() - debut
+		print("GG bg")
+		print(f"Temps : {int(temps)}s")
+		nom = enterbox("Bien joué, c'est quoi ton petit nom ?", "Entre ton nom")
+		nom = nom if nom else "Joueur inconnu"
+		self.insere_record(nom, temps)
+
 	def resize(self, event: pygame.event.Event):
 		self.width, self.height = event.x, event.y
 		self.xtilesize = self.width // self.horiz_tiles
@@ -185,6 +222,9 @@ class Game:
 											tile.y * self.ytilesize + self.ytilesize // 2)
 						self.base_board.blit(text, text_rect)
 			if tile.flagged:
+				if not tile.revealed:
+					self.base_board.blit(self.tile_image,
+										 (tile.x * self.xtilesize, tile.y * self.ytilesize))
 				self.base_board.blit(self.flag_image,
 									 (tile.x * self.xtilesize, tile.y * self.ytilesize))
 			if not (tile.flagged or tile.revealed):
@@ -280,3 +320,7 @@ class Game:
 			tile.count_neighbour_bombs()
 
 		self.generated = True
+
+	def insere_record(self, nom: str, temps: float):
+		with self.db:
+			self.db.execute("INSERT INTO 'records' (nom, bombes, temps) VALUES (?, ?, ?)", (nom, self.num_bombs, temps))
