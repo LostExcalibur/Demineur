@@ -185,6 +185,7 @@ class Game:
 		nom = enterbox("Bien joué, c'est quoi ton petit nom ?", "Entre ton nom")
 		nom = nom if nom else "Joueur inconnu"
 		self.insere_record(nom, temps)
+		self.affiche_records()
 
 	def resize(self, event: pygame.event.Event):
 		self.width, self.height = event.x, event.y
@@ -324,3 +325,10 @@ class Game:
 	def insere_record(self, nom: str, temps: float):
 		with self.db:
 			self.db.execute("INSERT INTO 'records' (nom, bombes, temps) VALUES (?, ?, ?)", (nom, self.num_bombs, temps))
+
+	def affiche_records(self):
+		with self.db:
+			print(f"\nRecords avec {self.num_bombs} bombes :")
+			for i, t in enumerate(self.db.execute("SELECT nom, temps from records WHERE BOMBES=(?) ORDER BY TEMPS",
+												  (self.num_bombs,)).fetchall()[:5]):
+				print(f"\t{i} : {t[0]}, {t[1]:.5}s")
